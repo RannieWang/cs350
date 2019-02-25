@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,8 @@
 
 #include <spinlock.h>
 #include <thread.h> /* required for struct threadarray */
-
+#include <synch.h>
+#include "opt-A2.h"
 struct addrspace;
 struct vnode;
 #ifdef UW
@@ -49,15 +50,20 @@ struct semaphore;
  * Process structure.
  */
 struct proc {
-	char *p_name;			/* Name of this process */
-	struct spinlock p_lock;		/* Lock for this structure */
-	struct threadarray p_threads;	/* Threads in this process */
+    char *p_name;           /* Name of this process */
+    
+    #if OPT_A2
+    pid_t p_pid;
+    #endif
+    
+    struct spinlock p_lock;     /* Lock for this structure */
+    struct threadarray p_threads;   /* Threads in this process */
 
-	/* VM */
-	struct addrspace *p_addrspace;	/* virtual address space */
+    /* VM */
+    struct addrspace *p_addrspace;  /* virtual address space */
 
-	/* VFS */
-	struct vnode *p_cwd;		/* current working directory */
+    /* VFS */
+    struct vnode *p_cwd;        /* current working directory */
 
 #ifdef UW
   /* a vnode to refer to the console device */
@@ -68,8 +74,30 @@ struct proc {
   struct vnode *console;                /* a vnode for the console device */
 #endif
 
-	/* add more material here as needed */
+    /* add more material here as needed */
 };
+
+#ifdef OPT_A2
+
+struct pids{
+  pid_t parentPid;
+  int exitCode;
+  bool isExited;
+
+  struct semaphore *sem;
+};
+
+pid_t pidCreate(void);
+void pidDestroy(pid_t p);
+pid_t getParentPid(pid_t pchild);
+void setParentPid(pid_t pchild, pid_t pparent);
+bool pidExist(pid_t p);
+void pid_setExitCode(pid_t p, int code);
+int pid_getExitCode(pid_t p);
+void pid_setisExited(pid_t p, bool exit);
+bool pid_getisExited(pid_t p);
+struct semaphore *pid_getsem (pid_t pid);
+#endif
 
 /* This is the process structure for the kernel and for kernel-only threads. */
 extern struct proc *kproc;
@@ -81,6 +109,10 @@ extern struct semaphore *no_proc_sem;
 
 /* Call once during system startup to allocate data structures. */
 void proc_bootstrap(void);
+
+#if OPT_A2
+
+#endif
 
 /* Create a fresh process for use by runprogram(). */
 struct proc *proc_create_runprogram(const char *name);
